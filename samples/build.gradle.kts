@@ -1,11 +1,11 @@
 plugins {
 	alias(libs.plugins.android.library)
 	alias(libs.plugins.kotlin.android)
-	alias(libs.plugins.kotlin.kapt)
+	alias(libs.plugins.ksp)
 }
 
 android {
-	namespace = "io.github.vafeen.samples"
+	namespace = "io.vafeen.samples"
 	compileSdk {
 		version = release(36)
 	}
@@ -13,7 +13,7 @@ android {
 	defaultConfig {
 		minSdk = 24
 
-		testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 		consumerProguardFiles("consumer-rules.pro")
 	}
 
@@ -27,21 +27,31 @@ android {
 		}
 	}
 	compileOptions {
-		sourceCompatibility = JavaVersion.VERSION_11
-		targetCompatibility = JavaVersion.VERSION_11
+		sourceCompatibility = JavaVersion.VERSION_17
+		targetCompatibility = JavaVersion.VERSION_17
 	}
-	kotlinOptions {
-		jvmTarget = "11"
+	kotlin {
+		jvmToolchain(17)
+	}
+	ksp {
+		// Указываем, что ваш процессор должен выполняться первым
+		arg("processorOrder", "helper-binds,dagger")
+
+		// Блокируем Dagger до генерации модулей
+		arg("blockDaggerUntil", "helper-modules-generated")
 	}
 }
 
 dependencies {
-	implementation(libs.appcompat.v7)
+	implementation(project(":dagger-helper-annotations"))
+	ksp(project(":dagger-helper-processor"))
+
 	implementation(libs.androidx.core.ktx)
+	implementation(libs.androidx.appcompat)
+	implementation(libs.material)
+
 	testImplementation(libs.junit)
-	androidTestImplementation(libs.runner)
-	androidTestImplementation(libs.espresso.core)
-	// dagger2
-	implementation("com.google.dagger:dagger:2.57.2")
-	kapt("com.google.dagger:dagger-compiler:2.57.2")
+	androidTestImplementation(libs.androidx.junit)
+	androidTestImplementation(libs.androidx.espresso.core)
+
 }
