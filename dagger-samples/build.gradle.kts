@@ -43,8 +43,8 @@ android {
 }
 
 dependencies {
-	implementation(project(":dagger-helper-annotations"))
-	ksp(project(":dagger-helper-processor"))
+	implementation(project(":dagger-forge-annotations"))
+	ksp(project(":dagger-forge-processor"))
 
 	implementation(libs.androidx.core.ktx)
 	implementation(libs.androidx.appcompat)
