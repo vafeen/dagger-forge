@@ -22,8 +22,8 @@ jobs:
       - name: Publish to MavenCentral
         run: |
           chmod +x ./gradlew
-          ./gradlew :dagger-helper-annotations:publishToMavenCentral -Pversion=$VERSION  --no-configuration-cache
-          ./gradlew :dagger-helper-processor:publishToMavenCentral -Pversion=$VERSION --no-configuration-cache
+          ./gradlew :dagger-forge-annotations:publishToMavenCentral -Pversion=$VERSION  --no-configuration-cache
+          ./gradlew :dagger-forge-processor:publishToMavenCentral -Pversion=$VERSION --no-configuration-cache
 
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

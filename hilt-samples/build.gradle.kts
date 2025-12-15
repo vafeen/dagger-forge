@@ -59,10 +59,10 @@ dependencies {
 	androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 	debugImplementation(libs.androidx.compose.ui.tooling)
 	debugImplementation(libs.androidx.compose.ui.test.manifest)
+	implementation(project(":dagger-forge-annotations"))
+	"ksp"(project(":dagger-forge-processor"))
 
 	// dagger-helper
-	implementation(project(":dagger-helper-annotations"))
-	ksp(project(":dagger-helper-processor"))
 	// hilt
 	implementation(libs.hilt.android)
 	ksp(libs.hilt.compiler)
