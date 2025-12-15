@@ -3,7 +3,7 @@ package io.github.vafeen.daggerhelper.processor.processing
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 import io.github.vafeen.daggerhelper.processor.logger
-import io.vafeen.daggerhelper.annotations.HelperBinds
+import io.vafeen.daggerhelper.annotations.BindsIn
 
 internal enum class ProcessingVisibility {
 	PUBLIC {
@@ -20,7 +20,7 @@ internal enum class ProcessingVisibility {
 			ksClassDeclaration: KSClassDeclaration,
 		): ProcessingVisibility {
 			val error =
-				{ modifier: Modifier -> "Symbols annotated with ${HelperBinds::class.simpleName} cannot be ${modifier.name}" }
+				{ modifier: Modifier -> "Symbols annotated with ${BindsIn::class.simpleName} cannot be ${modifier.name}" }
 			return when {
 				ksClassDeclaration.modifiers.contains(Modifier.PRIVATE) -> INTERNAL
 					.also {

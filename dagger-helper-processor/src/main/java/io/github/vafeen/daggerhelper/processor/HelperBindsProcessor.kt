@@ -10,7 +10,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
 import io.github.vafeen.daggerhelper.processor.processing.ProcessingVisibility
-import io.vafeen.daggerhelper.annotations.HelperBinds
+import io.vafeen.daggerhelper.annotations.BindsIn
 import java.io.OutputStreamWriter
 
 internal var logger: KSPLogger? = null
@@ -33,10 +33,10 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		val visibility: ProcessingVisibility
 	)
 
-	private val helperBindsAnnotationName = "io.vafeen.daggerhelper.annotations.HelperBinds"
+
 
 	override fun process(resolver: Resolver): List<KSAnnotated> {
-		val symbols = resolver.getSymbolsWithAnnotation(helperBindsAnnotationName)
+		val symbols = resolver.getSymbolsWithAnnotation(BindsIn::class.java.name)
 		val classDataList = mutableListOf<ClassData>()
 
 		// Собираем все аннотированные классы
@@ -44,18 +44,18 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 			if (symbol is KSClassDeclaration && symbol.validate()) {
 				val annotation = symbol.annotations
 					.firstOrNull {
-						it.annotationType.resolve().declaration.qualifiedName?.asString() == helperBindsAnnotationName
+						it.annotationType.resolve().declaration.qualifiedName?.asString() == BindsIn::class.java.name
 					} ?: return@forEach
 
 				val parentArg = annotation.arguments
-					.firstOrNull { it.name?.asString() == HelperBinds::parent.name }
+					.firstOrNull { it.name?.asString() == BindsIn::parent.name }
 				val moduleArg = annotation.arguments
-					.firstOrNull { it.name?.asString() == HelperBinds::module.name }
+					.firstOrNull { it.name?.asString() == BindsIn::module.name }
 
 				if (parentArg == null || moduleArg == null) {
 					logger?.error(
-						"@${HelperBinds::class.simpleName} must have both '${HelperBinds::parent.name}' " +
-								"and '${HelperBinds::module.name}' arguments",
+						"@${BindsIn::class.simpleName} must have both '${BindsIn::parent.name}' " +
+								"and '${BindsIn::module.name}' arguments",
 						symbol
 					)
 					return@forEach
@@ -66,7 +66,7 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 
 				if (parent == null || module == null) {
 					logger?.error(
-						"@${HelperBinds::class.simpleName} arguments must be class types",
+						"@${BindsIn::class.simpleName} arguments must be class types",
 						symbol
 					)
 					return@forEach
