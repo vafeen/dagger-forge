@@ -24,6 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Dagger Helper"
 include(":dagger-samples")
+include(":hilt-samples")
 include(":dagger-helper-annotations")
 include(":dagger-helper-processor")
-include(":sample-hilt-app")
