@@ -1,0 +1,58 @@
+plugins {
+	alias(libs.plugins.android.library)
+	alias(libs.plugins.kotlin.android)
+	alias(libs.plugins.ksp)
+}
+
+android {
+	namespace = "io.vafeen.samples"
+	compileSdk {
+		version = release(36)
+	}
+
+	defaultConfig {
+		minSdk = 24
+
+		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+		consumerProguardFiles("consumer-rules.pro")
+	}
+
+	buildTypes {
+		release {
+			isMinifyEnabled = false
+			proguardFiles(
+				getDefaultProguardFile("proguard-android-optimize.txt"),
+				"proguard-rules.pro"
+			)
+		}
+	}
+	compileOptions {
+		sourceCompatibility = JavaVersion.VERSION_17
+		targetCompatibility = JavaVersion.VERSION_17
+	}
+	kotlin {
+		jvmToolchain(17)
+	}
+	ksp {
+		arg("dagger.preprocessor", "true")
+		arg("dagger.helper.testMode", "false")
+		arg("dagger.helper.debug", "true")
+
+		arg("dagger.fastInit", "enabled")
+	}
+}
+
+dependencies {
+	implementation(project(":dagger-helper-annotations"))
+	ksp(project(":dagger-helper-processor"))
+
+	implementation(libs.androidx.core.ktx)
+	implementation(libs.androidx.appcompat)
+	implementation(libs.material)
+
+	testImplementation(libs.junit)
+	androidTestImplementation(libs.androidx.junit)
+	androidTestImplementation(libs.androidx.espresso.core)
+	api(libs.dagger)
+	ksp(libs.dagger.compiler)
+}
