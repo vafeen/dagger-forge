@@ -34,7 +34,6 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 	)
 
 
-
 	override fun process(resolver: Resolver): List<KSAnnotated> {
 		val symbols = resolver.getSymbolsWithAnnotation(BindsIn::class.java.name)
 		val classDataList = mutableListOf<ClassData>()
@@ -121,7 +120,11 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 				val methodName = "binds$annotatedClassName"
 
 				writer.write("    @dagger.Binds\n")
-				writer.write("    fun $methodName(impl: $annotatedClassName): $parentClassName")
+				writer.write(
+					"    fun $methodName(" +
+							"${annotatedClassName.decapitalize()}: $annotatedClassName):" +
+							" $parentClassName"
+				)
 
 				if (index < classDataList.size - 1) {
 					writer.write("\n\n")
@@ -133,4 +136,6 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 			writer.write("\n}\n")
 		}
 	}
+
+	private fun String.decapitalize() = replaceFirstChar { it.lowercase() }
 }

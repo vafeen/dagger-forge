@@ -38,12 +38,11 @@ interface AnimalComponent {
 	fun getCat(): Cat
 }
 
-// Сгенерированный код:
-//@Module
-//interface DaggerHelperAnimalModule : AnimalModule {
-//	@Binds
-//	fun bindsBlackDog(blackDog: BlackDog): Dog
-//
-//	@Binds
-//	fun bindsWhiteCat(whiteCat: WhiteCat): Cat
+// Generated code:
+//@dagger.Module
+//internal interface DaggerHelperAnimalModule : AnimalModule {
+//	@dagger.Binds
+//	fun bindsWhiteCat(impl: WhiteCat): Cat
+//	@dagger.Binds
+//	fun bindsBlackDog(impl: BlackDog): Dog
 //}

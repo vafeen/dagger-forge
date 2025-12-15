@@ -14,9 +14,7 @@ java {
 kotlin {
 	jvmToolchain(17)
 }
-dependencies {
-	api(libs.dagger)
-}
+
 //
 //mavenPublishing {
 //	publishToMavenCentral(automaticRelease = true)
