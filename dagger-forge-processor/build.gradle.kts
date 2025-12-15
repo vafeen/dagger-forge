@@ -32,7 +32,7 @@ mavenPublishing {
 
 	coordinates(
 		project.findProperty("group").toString(),
-		"dagger-helper-processor",
+		"dagger-forge-processor",
 		project.findProperty("version").toString()
 	)
 
