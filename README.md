@@ -27,3 +27,8 @@ https://central.sonatype.com/artifact/io.github.vafeen/dagger-forge-processor
 [DOCUMENTATION](DOCUMENTATION.md)
 
 [SAMPLES](SAMPLES.md)
+
+
+https://github.com/user-attachments/assets/f853e7e0-9494-48c7-8280-901469beda3d
+
+
