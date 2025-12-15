@@ -36,7 +36,7 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 
 	data class ModuleInfo(
 		val moduleType: KSType,
-		val installInComponent: String? = null
+		val installInComponents: List<String> = emptyList()
 	)
 
 	override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -88,8 +88,8 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		// Собираем информацию о каждом модуле (есть ли @SetComponent)
 		groupedByModule.keys.forEach { moduleType ->
 			val moduleDeclaration = moduleType.declaration as? KSClassDeclaration
-			val installInComponent = moduleDeclaration?.getInstallInComponent()
-			modulesInfo[moduleType] = ModuleInfo(moduleType, installInComponent)
+			val installInComponents = moduleDeclaration?.getInstallInComponents() ?: emptyList()
+			modulesInfo[moduleType] = ModuleInfo(moduleType, installInComponents)
 		}
 
 		// Генерируем код для каждого модуля
@@ -101,21 +101,26 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		return emptyList()
 	}
 
-	private fun KSClassDeclaration.getInstallInComponent(): String? {
+	private fun KSClassDeclaration.getInstallInComponents(): List<String> {
 		val setComponentAnnotation = this.annotations
 			.firstOrNull {
 				it.annotationType.resolve().declaration.qualifiedName?.asString() == SetComponent::class.java.name
-			} ?: return null
+			} ?: return emptyList()
 
 		val componentArg = setComponentAnnotation.arguments
 			.firstOrNull { it.name?.asString() == SetComponent::value.name }
 
-		return if (componentArg?.value is KSType) {
-			val componentType = componentArg.value as KSType
-			// Получаем полное имя компонента
-			componentType.declaration.qualifiedName?.asString()
+		return if (componentArg?.value is List<*>) {
+			val components = componentArg.value as List<*>
+			components.mapNotNull { component ->
+				if (component is KSType) {
+					component.declaration.qualifiedName?.asString()
+				} else {
+					null
+				}
+			}
 		} else {
-			null
+			emptyList()
 		}
 	}
 
@@ -147,9 +152,13 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 			writer.write("package $packageName\n\n")
 			writer.write("@dagger.Module\n")
 
-			if (moduleInfo.installInComponent != null) {
-				val componentSimpleName = moduleInfo.installInComponent
-				writer.write("@dagger.hilt.InstallIn($componentSimpleName::class)\n")
+			// Добавляем @InstallIn если есть компоненты
+			moduleInfo.installInComponents.ifNotEmpty { components ->
+				writer.write("@dagger.hilt.InstallIn(\n")
+				components.forEach {
+					writer.write("${"${it.classs},".addIndent()}\n")
+				}
+				writer.write(")\n")
 			}
 
 			writer.write("${moduleVisibility}interface $moduleName : $moduleSimpleName {\n\n")
@@ -178,4 +187,12 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 	}
 
 	private fun String.decapitalize() = replaceFirstChar { it.lowercase() }
+	private fun <T> List<T>.ifNotEmpty(lambda: (List<T>) -> Unit) {
+		if (this.isNotEmpty()) lambda(this)
+	}
+
+	val String.classs
+		get() = "${this}::class"
+
+	private fun String.addIndent(): String = this.prependIndent("    ")
 }
