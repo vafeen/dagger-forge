@@ -9,18 +9,28 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import io.github.vafeen.daggerhelper.processor.processing.ProcessingVisibility
+import io.vafeen.daggerhelper.annotations.HelperBinds
 import java.io.OutputStreamWriter
 
-class HelperBindsProcessor(
-	private val codeGenerator: CodeGenerator,
-	private val logger: KSPLogger,
-	private val options: Map<String, String>
-) : SymbolProcessor {
+internal var logger: KSPLogger? = null
+
+internal class HelperBindsProcessor private constructor(private val codeGenerator: CodeGenerator) :
+	SymbolProcessor {
+	private val libName = "DaggerHelper"
+
+	constructor(
+		codeGenerator: CodeGenerator,
+		kspLogger: KSPLogger
+	) : this(codeGenerator) {
+		logger = kspLogger
+	}
 
 	data class ClassData(
 		val annotatedClass: KSClassDeclaration,
 		val parentClass: KSType,
-		val moduleClass: KSType
+		val moduleClass: KSType,
+		val visibility: ProcessingVisibility
 	)
 
 	private val helperBindsAnnotationName = "io.vafeen.daggerhelper.annotations.HelperBinds"
@@ -38,11 +48,16 @@ class HelperBindsProcessor(
 					} ?: return@forEach
 
 				val parentArg = annotation.arguments
-					.firstOrNull { it.name?.asString() == "parent" }
+					.firstOrNull { it.name?.asString() == HelperBinds::parent.name }
 				val moduleArg = annotation.arguments
-					.firstOrNull { it.name?.asString() == "module" }
+					.firstOrNull { it.name?.asString() == HelperBinds::module.name }
 
 				if (parentArg == null || moduleArg == null) {
+					logger?.error(
+						"@${HelperBinds::class.simpleName} must have both '${HelperBinds::parent.name}' " +
+								"and '${HelperBinds::module.name}' arguments",
+						symbol
+					)
 					return@forEach
 				}
 
@@ -50,10 +65,15 @@ class HelperBindsProcessor(
 				val module = moduleArg.value as? KSType
 
 				if (parent == null || module == null) {
+					logger?.error(
+						"@${HelperBinds::class.simpleName} arguments must be class types",
+						symbol
+					)
 					return@forEach
 				}
 
-				classDataList.add(ClassData(symbol, parent, module))
+				val visibility = ProcessingVisibility.getClassAccessModifier(symbol)
+				classDataList.add(ClassData(symbol, parent, module, visibility))
 			}
 		}
 
@@ -74,9 +94,14 @@ class HelperBindsProcessor(
 		if (classDataList.isEmpty()) return
 
 		val firstData = classDataList.first()
-		val moduleName = "DaggerHelper${moduleType.declaration.simpleName.asString()}"
+		val moduleName = "$libName${moduleType.declaration.simpleName.asString()}"
 		val packageName = firstData.annotatedClass.packageName.asString()
 		val moduleSimpleName = moduleType.declaration.simpleName.asString()
+
+		// Определяем видимость всего модуля
+		// Если есть хотя бы один internal класс, весь модуль будет internal
+		val hasInternalClass = classDataList.any { it.visibility == ProcessingVisibility.INTERNAL }
+		val moduleVisibility = if (hasInternalClass) "internal " else ""
 
 		// Создаем новый файл
 		val file = codeGenerator.createNewFile(
@@ -87,17 +112,15 @@ class HelperBindsProcessor(
 
 		OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
 			writer.write("package $packageName\n\n")
-			writer.write("import dagger.Module\n")
-			writer.write("import dagger.Binds\n\n")
-			writer.write("@Module\n")
-			writer.write("interface $moduleName : $moduleSimpleName {\n\n")
+			writer.write("@dagger.Module\n")
+			writer.write("${moduleVisibility}interface $moduleName : $moduleSimpleName {\n\n")
 
 			classDataList.forEachIndexed { index, classData ->
 				val annotatedClassName = classData.annotatedClass.simpleName.asString()
 				val parentClassName = classData.parentClass.declaration.simpleName.asString()
 				val methodName = "binds$annotatedClassName"
 
-				writer.write("    @Binds\n")
+				writer.write("    @dagger.Binds\n")
 				writer.write("    fun $methodName(impl: $annotatedClassName): $parentClassName")
 
 				if (index < classDataList.size - 1) {

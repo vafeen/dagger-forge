@@ -22,19 +22,13 @@ interface Dog : Animal {
 
 interface AnimalModule
 
-@HelperBinds(
-	parent = Cat::class,
-	module = AnimalModule::class
-)
+@HelperBinds(parent = Cat::class, module = AnimalModule::class)
 class WhiteCat @Inject constructor() : Cat {
 	override val sound: String = Cat.MEOW
 }
 
-@HelperBinds(
-	parent = Dog::class,
-	module = AnimalModule::class
-)
-class BlackDog @Inject constructor() : Dog {
+@HelperBinds(parent = Dog::class, module = AnimalModule::class)
+internal class BlackDog @Inject constructor() : Dog {
 	override val sound: String = Dog.WOOF
 }
 
