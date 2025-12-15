@@ -1,7 +1,7 @@
 package io.vafeen.samples
 
 import dagger.Component
-import io.vafeen.daggerhelper.annotations.BindsIn
+import io.vafeen.daggerfodge.annotations.BindsIn
 import javax.inject.Inject
 
 interface Animal {
@@ -32,7 +32,7 @@ internal class BlackDog @Inject constructor() : Dog {
 	override val sound: String = Dog.WOOF
 }
 
-@Component(modules = [DaggerHelperAnimalModule::class])
+@Component(modules = [DaggerForgeAnimalModule::class])
 interface AnimalComponent {
 	fun getDog(): Dog
 	fun getCat(): Cat
@@ -40,7 +40,7 @@ interface AnimalComponent {
 
 // Generated code:
 //@dagger.Module
-//internal interface DaggerHelperAnimalModule : AnimalModule {
+//internal interface DaggerForgeAnimalModule : AnimalModule {
 //	@dagger.Binds
 //	fun bindsWhiteCat(impl: WhiteCat): Cat
 //	@dagger.Binds

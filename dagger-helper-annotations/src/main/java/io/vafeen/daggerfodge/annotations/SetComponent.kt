@@ -1,4 +1,4 @@
-package io.vafeen.daggerhelper.annotations
+package io.vafeen.daggerfodge.annotations
 
 import kotlin.reflect.KClass
 

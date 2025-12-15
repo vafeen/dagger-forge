@@ -22,7 +22,7 @@ dependencyResolutionManagement {
 	}
 }
 
-rootProject.name = "Dagger Helper"
+rootProject.name = "Dagger Forge"
 include(":dagger-samples")
 include(":hilt-samples")
 include(":dagger-helper-annotations")

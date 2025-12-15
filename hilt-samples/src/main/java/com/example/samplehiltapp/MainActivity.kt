@@ -13,7 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.samplehiltapp.ui.theme.DaggerHelperTheme
+import com.example.samplehiltapp.ui.theme.DaggerForgeTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,7 +23,7 @@ internal class MainActivity : ComponentActivity() {
 		enableEdgeToEdge()
 		setContent {
 			val viewModel: MainActivityViewModel = hiltViewModel()
-			DaggerHelperTheme {
+			DaggerForgeTheme {
 				Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 					Column(
 						modifier = Modifier

@@ -3,8 +3,8 @@ package com.example.samplehiltapp
 import dagger.hilt.android.components.FragmentComponent
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.components.SingletonComponent
-import io.vafeen.daggerhelper.annotations.BindsIn
-import io.vafeen.daggerhelper.annotations.SetComponent
+import io.vafeen.daggerfodge.annotations.BindsIn
+import io.vafeen.daggerfodge.annotations.SetComponent
 import javax.inject.Inject
 
 interface Animal {
@@ -48,12 +48,12 @@ internal class BlackDog @Inject constructor() : Dog {
 //	dagger.hilt.android.components.ViewModelComponent::class,
 //	dagger.hilt.android.components.FragmentComponent::class,
 //)
-//internal interface DaggerHelperAnimalModule : AnimalModule {
+//internal interface DaggerForgeAnimalModule : com.example.samplehiltapp.AnimalModule {
 //
 //	@dagger.Binds
-//	fun bindsWhiteCat(whiteCat: WhiteCat): Cat
+//	fun bindsWhiteCat(whiteCat: com.example.samplehiltapp.WhiteCat): com.example.samplehiltapp.Cat
 //
 //	@dagger.Binds
-//	fun bindsBlackDog(blackDog: BlackDog): Dog
+//	fun bindsBlackDog(blackDog: com.example.samplehiltapp.BlackDog): com.example.samplehiltapp.Dog
 //
 //}

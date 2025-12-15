@@ -1,4 +1,4 @@
-package io.github.vafeen.daggerhelper.processor
+package io.github.vafeen.daggerforge.processor
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -7,18 +7,19 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
-import io.github.vafeen.daggerhelper.processor.processing.ProcessingVisibility
-import io.vafeen.daggerhelper.annotations.BindsIn
-import io.vafeen.daggerhelper.annotations.SetComponent
+import io.github.vafeen.daggerforge.processor.processing.ProcessingVisibility
+import io.vafeen.daggerfodge.annotations.BindsIn
+import io.vafeen.daggerfodge.annotations.SetComponent
 import java.io.OutputStreamWriter
 
 internal var logger: KSPLogger? = null
 
-internal class HelperBindsProcessor private constructor(private val codeGenerator: CodeGenerator) :
+internal class DaggerForgeProcessor private constructor(private val codeGenerator: CodeGenerator) :
 	SymbolProcessor {
-	private val libName = "DaggerHelper"
+	private val libName = "DaggerForge"
 
 	constructor(
 		codeGenerator: CodeGenerator,
@@ -134,7 +135,7 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		val moduleType = moduleInfo.moduleType
 		val moduleName = "$libName${moduleType.declaration.simpleName.asString()}"
 		val packageName = firstData.annotatedClass.packageName.asString()
-		val moduleSimpleName = moduleType.declaration.simpleName.asString()
+		val moduleParentName = moduleType.declaration.fullName()
 
 		// Определяем видимость всего модуля
 		// Если есть хотя бы один internal класс, весь модуль будет internal
@@ -161,18 +162,20 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 				writer.write(")\n")
 			}
 
-			writer.write("${moduleVisibility}interface $moduleName : $moduleSimpleName {\n\n")
+			writer.write("${moduleVisibility}interface $moduleName : $moduleParentName {\n\n")
 
 			classDataList.forEachIndexed { index, classData ->
-				val annotatedClassName = classData.annotatedClass.simpleName.asString()
-				val parentClassName = classData.parentClass.declaration.simpleName.asString()
-				val methodName = "binds$annotatedClassName"
+				val parameterType = classData.annotatedClass
+				val returnType = classData.parentClass.declaration.fullName()
+				val methodName = "binds${parameterType.simpleName()}"
 
 				writer.write("    @dagger.Binds\n")
 				writer.write(
 					"    fun $methodName(" +
-							"${annotatedClassName.decapitalize()}: $annotatedClassName):" +
-							" $parentClassName"
+							"${
+								parameterType.simpleName().decapitalize()
+							}: ${parameterType.fullName()}):" +
+							" $returnType"
 				)
 
 				if (index < classDataList.size - 1) {
@@ -195,4 +198,8 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		get() = "${this}::class"
 
 	private fun String.addIndent(): String = this.prependIndent("    ")
+	private fun KSDeclaration.fullName() =
+		this.qualifiedName?.asString() ?: "${this.packageName}.${this.simpleName}"
+
+	private fun KSDeclaration.simpleName() = this.simpleName.asString()
 }

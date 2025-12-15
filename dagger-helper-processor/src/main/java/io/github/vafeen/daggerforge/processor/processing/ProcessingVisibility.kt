@@ -1,9 +1,9 @@
-package io.github.vafeen.daggerhelper.processor.processing
+package io.github.vafeen.daggerforge.processor.processing
 
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
-import io.github.vafeen.daggerhelper.processor.logger
-import io.vafeen.daggerhelper.annotations.BindsIn
+import io.github.vafeen.daggerforge.processor.logger
+import io.vafeen.daggerfodge.annotations.BindsIn
 
 internal enum class ProcessingVisibility {
 	PUBLIC {
