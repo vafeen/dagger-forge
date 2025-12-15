@@ -11,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
 import io.github.vafeen.daggerhelper.processor.processing.ProcessingVisibility
 import io.vafeen.daggerhelper.annotations.BindsIn
+import io.vafeen.daggerhelper.annotations.SetComponent
 import java.io.OutputStreamWriter
 
 internal var logger: KSPLogger? = null
@@ -33,6 +34,10 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		val visibility: ProcessingVisibility
 	)
 
+	data class ModuleInfo(
+		val moduleType: KSType,
+		val installInComponent: String? = null
+	)
 
 	override fun process(resolver: Resolver): List<KSAnnotated> {
 		val symbols = resolver.getSymbolsWithAnnotation(BindsIn::class.java.name)
@@ -76,23 +81,52 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 			}
 		}
 
-		// Группируем по модулю и генерируем код
+		// Группируем по модулю и получаем информацию о каждом модуле
 		val groupedByModule = classDataList.groupBy { it.moduleClass }
+		val modulesInfo = mutableMapOf<KSType, ModuleInfo>()
 
+		// Собираем информацию о каждом модуле (есть ли @SetComponent)
+		groupedByModule.keys.forEach { moduleType ->
+			val moduleDeclaration = moduleType.declaration as? KSClassDeclaration
+			val installInComponent = moduleDeclaration?.getInstallInComponent()
+			modulesInfo[moduleType] = ModuleInfo(moduleType, installInComponent)
+		}
+
+		// Генерируем код для каждого модуля
 		groupedByModule.forEach { (moduleType, classDataForModule) ->
-			generateModuleForGroup(moduleType, classDataForModule)
+			val moduleInfo = modulesInfo[moduleType] ?: ModuleInfo(moduleType)
+			generateModuleForGroup(moduleInfo, classDataForModule)
 		}
 
 		return emptyList()
 	}
 
+	private fun KSClassDeclaration.getInstallInComponent(): String? {
+		val setComponentAnnotation = this.annotations
+			.firstOrNull {
+				it.annotationType.resolve().declaration.qualifiedName?.asString() == SetComponent::class.java.name
+			} ?: return null
+
+		val componentArg = setComponentAnnotation.arguments
+			.firstOrNull { it.name?.asString() == SetComponent::value.name }
+
+		return if (componentArg?.value is KSType) {
+			val componentType = componentArg.value as KSType
+			// Получаем полное имя компонента
+			componentType.declaration.qualifiedName?.asString()
+		} else {
+			null
+		}
+	}
+
 	private fun generateModuleForGroup(
-		moduleType: KSType,
+		moduleInfo: ModuleInfo,
 		classDataList: List<ClassData>
 	) {
 		if (classDataList.isEmpty()) return
 
 		val firstData = classDataList.first()
+		val moduleType = moduleInfo.moduleType
 		val moduleName = "$libName${moduleType.declaration.simpleName.asString()}"
 		val packageName = firstData.annotatedClass.packageName.asString()
 		val moduleSimpleName = moduleType.declaration.simpleName.asString()
@@ -112,6 +146,12 @@ internal class HelperBindsProcessor private constructor(private val codeGenerato
 		OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
 			writer.write("package $packageName\n\n")
 			writer.write("@dagger.Module\n")
+
+			if (moduleInfo.installInComponent != null) {
+				val componentSimpleName = moduleInfo.installInComponent
+				writer.write("@dagger.hilt.InstallIn($componentSimpleName::class)\n")
+			}
+
 			writer.write("${moduleVisibility}interface $moduleName : $moduleSimpleName {\n\n")
 
 			classDataList.forEachIndexed { index, classData ->
