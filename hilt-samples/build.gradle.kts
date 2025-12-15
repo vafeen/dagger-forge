@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-	namespace = "com.example.samplehiltapp"
+	namespace = "com.github.samplehiltapp"
 	compileSdk {
 		version = release(36)
 	}

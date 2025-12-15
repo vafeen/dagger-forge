@@ -6,3 +6,9 @@
 
 **DaggerForge** is a lightweight Kotlin library for generating Dagger modules using **KSP (Kotlin Symbol Processing)**.
 It automatically creates `@Module` interfaces with `@Binds` methods based on the `@BindsIn` annotation, with Hilt integration via `@SetComponent`.
+
+## Docs
+
+[DOCUMENTATION](DOCUMENTATION.md)
+
+[SAMPLES](SAMPLES.md)

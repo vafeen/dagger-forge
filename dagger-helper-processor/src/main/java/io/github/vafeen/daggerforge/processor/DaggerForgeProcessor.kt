@@ -10,9 +10,10 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import io.github.vafeen.daggerfodge.annotations.BindsIn
+import io.github.vafeen.daggerfodge.annotations.SetComponent
 import io.github.vafeen.daggerforge.processor.processing.ProcessingVisibility
-import io.vafeen.daggerfodge.annotations.BindsIn
-import io.vafeen.daggerfodge.annotations.SetComponent
+import io.github.vafeen.daggerforge.processor.processing.copyright
 import java.io.OutputStreamWriter
 
 internal var logger: KSPLogger? = null
@@ -151,9 +152,9 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 
 		OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
 			writer.write("package $packageName\n\n")
+			writer.write("${copyright()}\n")
 			writer.write("@dagger.Module\n")
 
-			// Добавляем @InstallIn если есть компоненты
 			moduleInfo.installInComponents.ifNotEmpty { components ->
 				writer.write("@dagger.hilt.InstallIn(\n")
 				components.forEach {
