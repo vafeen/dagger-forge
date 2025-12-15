@@ -9,17 +9,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.ksp.toClassName
-import com.squareup.kotlinpoet.ksp.toTypeName
-import io.vafeen.daggerhelper.annotations.HelperBinds
-import java.util.Locale.getDefault
-
+import java.io.OutputStreamWriter
 
 class HelperBindsProcessor(
 	private val codeGenerator: CodeGenerator,
@@ -27,125 +17,97 @@ class HelperBindsProcessor(
 	private val options: Map<String, String>
 ) : SymbolProcessor {
 
-	// Храним все аннотированные классы для генерации одного модуля
-	private val annotatedClasses = mutableListOf<Triple<KSClassDeclaration, KSType, KSType>>()
+	data class ClassData(
+		val annotatedClass: KSClassDeclaration,
+		val parentClass: KSType,
+		val moduleClass: KSType
+	)
+
+	private val helperBindsAnnotationName = "io.vafeen.daggerhelper.annotations.HelperBinds"
 
 	override fun process(resolver: Resolver): List<KSAnnotated> {
+		val symbols = resolver.getSymbolsWithAnnotation(helperBindsAnnotationName)
+		val classDataList = mutableListOf<ClassData>()
 
-		val symbols = resolver.getSymbolsWithAnnotation(HelperBinds::class.qualifiedName!!)
-		val ret = mutableListOf<KSAnnotated>()
-
+		// Собираем все аннотированные классы
 		symbols.forEach { symbol ->
-			if (symbol !is KSClassDeclaration || !symbol.validate()) {
-				ret.add(symbol)
-				return@forEach
-			}
+			if (symbol is KSClassDeclaration && symbol.validate()) {
+				val annotation = symbol.annotations
+					.firstOrNull {
+						it.annotationType.resolve().declaration.qualifiedName?.asString() == helperBindsAnnotationName
+					} ?: return@forEach
 
-			try {
-				val annotation = symbol.annotations.firstOrNull {
-					it.shortName.asString() == HelperBinds::class.simpleName
-				} ?: return@forEach
+				val parentArg = annotation.arguments
+					.firstOrNull { it.name?.asString() == "parent" }
+				val moduleArg = annotation.arguments
+					.firstOrNull { it.name?.asString() == "module" }
 
-				val args = annotation.arguments.associateBy(
-					{ it.name?.asString() ?: "" },
-					{ it.value }
-				)
-
-				val parentClass = args["parent"] as? KSType
-				val moduleClass = args["module"] as? KSType
-
-				if (parentClass == null || moduleClass == null) {
-					logger.error("Missing required arguments in @HelperBinds", symbol)
+				if (parentArg == null || moduleArg == null) {
 					return@forEach
 				}
 
-				// Сохраняем для генерации в finish()
-				annotatedClasses.add(Triple(symbol, parentClass, moduleClass))
+				val parent = parentArg.value as? KSType
+				val module = moduleArg.value as? KSType
 
-			} catch (e: Exception) {
-				logger.error("Error processing @HelperBinds: ${e.message}", symbol)
+				if (parent == null || module == null) {
+					return@forEach
+				}
+
+				classDataList.add(ClassData(symbol, parent, module))
 			}
 		}
 
-		return ret
-	}
+		// Группируем по модулю и генерируем код
+		val groupedByModule = classDataList.groupBy { it.moduleClass }
 
-	override fun finish() {
-		if (annotatedClasses.isEmpty()) return
-
-		// Группируем по moduleClass
-		val groupedByModule = annotatedClasses.groupBy { it.third }
-
-		groupedByModule.forEach { (moduleClass, classes) ->
-			generateModule(moduleClass, classes)
+		groupedByModule.forEach { (moduleType, classDataForModule) ->
+			generateModuleForGroup(moduleType, classDataForModule)
 		}
+
+		return emptyList()
 	}
 
-	private fun generateModule(
-		moduleClass: KSType,
-		classes: List<Triple<KSClassDeclaration, KSType, KSType>>
+	private fun generateModuleForGroup(
+		moduleType: KSType,
+		classDataList: List<ClassData>
 	) {
-		if (classes.isEmpty()) return
+		if (classDataList.isEmpty()) return
 
-		// Берем package из первого класса
-		val packageName = classes.first().first.packageName.asString()
-		val moduleClassName = moduleClass.declaration.simpleName.asString()
+		val firstData = classDataList.first()
+		val moduleName = "DaggerHelper${moduleType.declaration.simpleName.asString()}"
+		val packageName = firstData.annotatedClass.packageName.asString()
+		val moduleSimpleName = moduleType.declaration.simpleName.asString()
 
-		// Имя сгенерированного модуля
-		val generatedModuleName = "DaggerHelper${moduleClassName}"
+		// Создаем новый файл
+		val file = codeGenerator.createNewFile(
+			dependencies = Dependencies(aggregating = false),
+			packageName = packageName,
+			fileName = moduleName
+		)
 
-		// Создаем интерфейс модуля
-		val moduleSpec = TypeSpec.interfaceBuilder(generatedModuleName)
-			.addAnnotation(
-				AnnotationSpec.builder(ClassName("dagger", "Module"))
-					.build()
-			)
-			.addSuperinterface(moduleClass.toClassName())
-			.apply {
-				// Добавляем методы @Binds для каждого аннотированного класса
-				classes.forEach { (annotatedClass, parentClass, _) ->
-					val annotatedClassName = annotatedClass.simpleName.asString()
-					val parentClassName = parentClass.declaration.simpleName.asString()
-					val parameterName =
-						annotatedClassName.replaceFirstChar { it.lowercase(getDefault()) }
+		OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
+			writer.write("package $packageName\n\n")
+			writer.write("import dagger.Module\n")
+			writer.write("import dagger.Binds\n\n")
+			writer.write("@Module\n")
+			writer.write("interface $moduleName : $moduleSimpleName {\n\n")
 
-					val method = FunSpec.builder("binds$annotatedClassName")
-						.addAnnotation(ClassName("dagger", "Binds"))
-						.addModifiers(KModifier.ABSTRACT)
-						.returns(parentClass.toTypeName())
-						.addParameter(
-							parameterName,
-							annotatedClass.toClassName()
-						)
-						.build()
+			classDataList.forEachIndexed { index, classData ->
+				val annotatedClassName = classData.annotatedClass.simpleName.asString()
+				val parentClassName = classData.parentClass.declaration.simpleName.asString()
+				val methodName = "binds$annotatedClassName"
 
-					addFunction(method)
+				writer.write("    @Binds\n")
+				writer.write("    fun $methodName(impl: $annotatedClassName): $parentClassName")
+
+				if (index < classDataList.size - 1) {
+					writer.write("\n\n")
+				} else {
+					writer.write("\n")
 				}
 			}
-			.build()
 
-		// Создаем FileSpec правильно
-		val fileSpec = FileSpec.builder(packageName, generatedModuleName)
-			.addFileComment("Generated by HelperBinds KSP processor", arrayOf<Any>())
-			.addFileComment("Do not edit!", arrayOf<Any>())
-			.addImport("dagger", "Binds")
-			.addImport("dagger", "Module")
-			.addType(moduleSpec)  // ⬅️ Добавляем тип в файл
-			.build()
-
-		// Записываем файл
-		val dependencies = Dependencies(false)
-		codeGenerator.createNewFile(
-			dependencies = dependencies,
-			packageName = packageName,
-			fileName = generatedModuleName,
-			extensionName = "kt"
-		).use { outputStream ->
-			outputStream.writer().use { writer ->
-				fileSpec.writeTo(writer)  // ⬅️ Просто пишем fileSpec
-			}
+			writer.write("\n}\n")
 		}
-
-		logger.info("✅ Generated module: $generatedModuleName with ${classes.size} bind methods")
 	}
 }

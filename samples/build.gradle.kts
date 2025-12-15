@@ -34,11 +34,11 @@ android {
 		jvmToolchain(17)
 	}
 	ksp {
-		// Указываем, что ваш процессор должен выполняться первым
-		arg("processorOrder", "helper-binds,dagger")
+		arg("dagger.preprocessor", "true")
+		arg("dagger.helper.testMode", "false")
+		arg("dagger.helper.debug", "true")
 
-		// Блокируем Dagger до генерации модулей
-		arg("blockDaggerUntil", "helper-modules-generated")
+		arg("dagger.fastInit", "enabled")
 	}
 }
 
@@ -53,5 +53,5 @@ dependencies {
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
-
+	ksp(libs.dagger.compiler)
 }

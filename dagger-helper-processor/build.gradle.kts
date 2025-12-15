@@ -19,11 +19,11 @@ dependencies {
 	implementation(libs.symbol.processing.api)
 
 	// Для генерации кода
-	implementation("com.squareup:kotlinpoet:2.2.0")
-	implementation("com.squareup:kotlinpoet-ksp:2.2.0")
+//	implementation("com.squareup:kotlinpoet:2.2.0")
+//	implementation("com.squareup:kotlinpoet-ksp:2.2.0")
 
 //	implementation(libs.dagger)
-	implementation(libs.dagger.compiler)
+
 }
 //
 //mavenPublishing {
