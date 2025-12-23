@@ -37,7 +37,9 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 	)
 
 	data class ModuleInfo(
-		val moduleType: KSType,
+		val packageName: String,
+		val name: String,
+//		val moduleType: KSType,
 		val installInComponents: List<String> = emptyList()
 	)
 
@@ -89,14 +91,15 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 
 		// Собираем информацию о каждом модуле (есть ли @SetComponent)
 		groupedByModule.keys.forEach { moduleType ->
-			val moduleDeclaration = moduleType.declaration as? KSClassDeclaration
-			val installInComponents = moduleDeclaration?.getInstallInComponents() ?: emptyList()
-			modulesInfo[moduleType] = ModuleInfo(moduleType, installInComponents)
+			val moduleDeclaration = moduleType.declaration as KSClassDeclaration
+			modulesInfo[moduleType] = moduleDeclaration.asModule()
 		}
 
 		// Генерируем код для каждого модуля
 		groupedByModule.forEach { (moduleType, classDataForModule) ->
-			val moduleInfo = modulesInfo[moduleType] ?: ModuleInfo(moduleType)
+			val moduleInfo =
+				modulesInfo[moduleType]
+					?: throw Exception("no module found for this type $moduleType")
 			generateModuleForGroup(moduleInfo, classDataForModule)
 		}
 
@@ -126,17 +129,23 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 		}
 	}
 
+	private fun KSClassDeclaration.asModule(): ModuleInfo {
+		return ModuleInfo(
+			packageName = packageName.asString(),
+//				moduleType = moduleType,
+			name = simpleName.asString(),
+			installInComponents = getInstallInComponents()
+		)
+	}
+
 	private fun generateModuleForGroup(
 		moduleInfo: ModuleInfo,
 		classDataList: List<ClassData>
 	) {
 		if (classDataList.isEmpty()) return
 
-		val firstData = classDataList.first()
-		val moduleType = moduleInfo.moduleType
-		val moduleName = "$libName${moduleType.declaration.simpleName.asString()}"
-		val packageName = firstData.annotatedClass.packageName.asString()
-		val moduleParentName = moduleType.declaration.fullName()
+		val moduleName = "$libName${moduleInfo.name}"
+		val moduleParentName = moduleInfo.name
 
 		// Определяем видимость всего модуля
 		// Если есть хотя бы один internal класс, весь модуль будет internal
@@ -146,12 +155,12 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 		// Создаем новый файл
 		val file = codeGenerator.createNewFile(
 			dependencies = Dependencies(aggregating = false),
-			packageName = packageName,
+			packageName = moduleInfo.packageName,
 			fileName = moduleName
 		)
 
 		OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
-			writer.write("package $packageName\n\n")
+			writer.write("package ${moduleInfo.packageName}\n\n")
 			writer.write("${copyright()}\n")
 			writer.write("@dagger.Module\n")
 
@@ -163,7 +172,7 @@ internal class DaggerForgeProcessor private constructor(private val codeGenerato
 				writer.write(")\n")
 			}
 
-			writer.write("${moduleVisibility}interface $moduleName : $moduleParentName {\n\n")
+			writer.write("${moduleVisibility}interface $moduleName : ${moduleInfo.packageName}.${moduleParentName} {\n\n")
 
 			classDataList.forEachIndexed { index, classData ->
 				val parameterType = classData.annotatedClass
