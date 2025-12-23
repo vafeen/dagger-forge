@@ -44,6 +44,9 @@ android {
 
 dependencies {
 	implementation(project(":dagger-forge-annotations"))
+
+	// KSP runs processors in the order they are declared.
+	// To ensure dagger-forge-processor runs before Dagger, it is declared first.
 	ksp(project(":dagger-forge-processor"))
 
 	implementation(libs.androidx.core.ktx)
@@ -54,5 +57,7 @@ dependencies {
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
 	api(libs.dagger)
+
+	// Dagger's processor will run after dagger-forge-processor.
 	ksp(libs.dagger.compiler)
 }

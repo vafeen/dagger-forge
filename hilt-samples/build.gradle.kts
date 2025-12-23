@@ -60,11 +60,14 @@ dependencies {
 	debugImplementation(libs.androidx.compose.ui.tooling)
 	debugImplementation(libs.androidx.compose.ui.test.manifest)
 	implementation(project(":dagger-forge-annotations"))
-	"ksp"(project(":dagger-forge-processor"))
+	// KSP runs processors in the order they are declared.
+	// To ensure dagger-forge-processor runs before Hilt, it is declared first.
+	ksp(project(":dagger-forge-processor"))
 
 	// dagger-helper
 	// hilt
 	implementation(libs.hilt.android)
+	// Hilt's processor will run after dagger-forge-processor.
 	ksp(libs.hilt.compiler)
 	// hilt viewModel
 	implementation(libs.androidx.hilt.navigation.compose)
